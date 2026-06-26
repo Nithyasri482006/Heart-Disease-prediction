@@ -1,34 +1,104 @@
-
 import streamlit as st
-import numpy as np
+import pandas as pd
 import pickle
 
-model = pickle.load(open('heart_disease_model.pkl', 'rb'))
-scaler = pickle.load(open('scaler.pkl', 'rb'))
+# Load model
+model = pickle.load(open("notebook/heart_disease_model.pkl", "rb"))
+scaler = pickle.load(open("notebook/scaler.pkl", "rb"))
 
-st.title("Heart Disease Prediction System")
+st.set_page_config(page_title="Heart Disease Prediction", page_icon="❤️")
 
-age = st.number_input("Age", min_value=1)
-gender = st.selectbox("Gender", [1, 2])
-height = st.number_input("Height")
-weight = st.number_input("Weight")
-ap_hi = st.number_input("AP_HI")
-ap_lo = st.number_input("AP_LO")
-cholesterol = st.selectbox("Cholesterol", [1, 2, 3])
-glucose = st.selectbox("Glucose", [1, 2, 3])
-smoke = st.selectbox("Smoke", [0, 1])
-alco = st.selectbox("Alcohol", [0, 1])
-active = st.selectbox("Active", [0, 1])
+st.title("❤️ Heart Disease Prediction System")
+
+st.write("Enter the patient's details below.")
+
+# --------------------------
+# User Inputs
+# --------------------------
+
+age = st.number_input("Age", 20, 100, 40)
+
+sex = st.selectbox("Sex", ["M", "F"])
+
+chest = st.selectbox(
+    "Chest Pain Type",
+    ["ATA", "NAP", "ASY", "TA"]
+)
+
+bp = st.number_input("Resting Blood Pressure", 80, 250, 120)
+
+chol = st.number_input("Cholesterol", 0, 700, 200)
+
+fbs = st.selectbox("Fasting Blood Sugar >120 mg/dl", [0, 1])
+
+ecg = st.selectbox(
+    "Resting ECG",
+    ["Normal", "ST", "LVH"]
+)
+
+maxhr = st.number_input("Maximum Heart Rate", 60, 220, 150)
+
+angina = st.selectbox(
+    "Exercise Induced Angina",
+    ["Y", "N"]
+)
+
+oldpeak = st.number_input(
+    "Old Peak",
+    min_value=0.0,
+    max_value=10.0,
+    value=1.0
+)
+
+slope = st.selectbox(
+    "ST Slope",
+    ["Up", "Flat", "Down"]
+)
+
+# --------------------------
+# Prediction
+# --------------------------
 
 if st.button("Predict"):
-    data = np.array([[age, gender, height, weight,
-                      ap_hi, ap_lo, cholesterol,
-                      glucose, smoke, alco, active]])
 
-    data = scaler.transform(data)
-    prediction = model.predict(data)
+    input_data = pd.DataFrame({
+        "Age":[age],
+        "Sex":[sex],
+        "ChestPainType":[chest],
+        "RestingBP":[bp],
+        "Cholesterol":[chol],
+        "FastingBS":[fbs],
+        "RestingECG":[ecg],
+        "MaxHR":[maxhr],
+        "ExerciseAngina":[angina],
+        "Oldpeak":[oldpeak],
+        "ST_Slope":[slope]
+    })
+
+    # One Hot Encoding
+    input_data = pd.get_dummies(input_data)
+
+    # Match training columns
+    train_columns = [
+        'Age','RestingBP','Cholesterol','FastingBS','MaxHR','Oldpeak',
+        'Sex_F','Sex_M',
+        'ChestPainType_ASY','ChestPainType_ATA',
+        'ChestPainType_NAP','ChestPainType_TA',
+        'RestingECG_LVH','RestingECG_Normal','RestingECG_ST',
+        'ExerciseAngina_N','ExerciseAngina_Y',
+        'ST_Slope_Down','ST_Slope_Flat','ST_Slope_Up'
+    ]
+
+    input_data = input_data.reindex(columns=train_columns, fill_value=0)
+
+    # Scale
+    input_scaled = scaler.transform(input_data)
+
+    prediction = model.predict(input_scaled)
+
+    st.subheader("Prediction Result")
 
     if prediction[0] == 1:
-        st.error("Heart Disease Detected")
+        st.error("⚠️ The patient is likely to have Heart Disease.")
     else:
-        st.success("No Heart Disease Detected")
+        st.success("✅ The patient is unlikely to have Heart Disease.")
